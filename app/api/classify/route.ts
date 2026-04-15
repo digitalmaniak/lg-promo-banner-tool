@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { BriefData, ClassificationResult, PromotionType } from '@/lib/types';
+import { LG_BRAND_KNOWLEDGE } from '@/lib/brandKnowledge';
 
 // Strip markdown code fences Claude sometimes adds despite instructions
 function extractJSON(text: string): string {
@@ -27,27 +28,29 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       const systemPrompt = `You are an LG promotional banner classification expert at HSAD Creative Services.
 
-Analyze the campaign brief and return ONLY a valid JSON object — no markdown, no explanation, just raw JSON.
+${LG_BRAND_KNOWLEDGE}
+
+Analyze the campaign brief using the brand knowledge above and return ONLY a valid JSON object — no markdown, no explanation, just raw JSON.
 
 Required structure:
 {
   "type": <exactly one of: "NPI" | "Price Drop" | "Event Sale" | "Bundle" | "Clearance" | "Brand" | "Comparison">,
   "confidence": <float 0-1>,
-  "template": <snake_case string e.g. "npi_dark_hero">,
-  "reasoning": <1-2 sentences explaining the classification>,
-  "suggestedBadge": <short ALL-CAPS text e.g. "NEW ARRIVAL" or "SAVE $500", or null>,
+  "template": <one of: "npi_beauty_shot" | "lifestyle_hero" | "3d_stage_hero" | "el_shape_multi" | "promo_badge_hero">,
+  "reasoning": <1-2 sentences explaining the classification using the brand knowledge type guide>,
+  "suggestedBadge": <short ALL-CAPS text matching brand badge standards e.g. "NEW ARRIVAL" or "SAVE $500", or null>,
   "urgencySignals": <array of strings — urgency elements found in the brief>,
-  "targetDemographic": <string describing the target audience>,
-  "brandToneMatch": <string describing the recommended brand tone>
+  "targetDemographic": <string describing the target audience matching LG persona language>,
+  "brandToneMatch": <string describing the recommended brand tone from: "Premium & Sophisticated" | "Urgent & Value-Driven" | "Seasonal & Energetic" | "Trustworthy & Clear" | "Exclusive & Aspirational">
 }
 
-Type guide:
-- NPI: New product introduction or launch
-- Price Drop: Promotional pricing, savings, discounts
-- Event Sale: Holiday, seasonal, or event-tied promotion
-- Bundle: Multi-product or accessory bundles
-- Clearance: End-of-life or inventory clearance
-- Brand: Brand awareness without a specific product push
+Type guide (use the 7 Strategic Types from brand knowledge above):
+- NPI: New product introduction or launch (Early Adopters audience)
+- Price Drop: Promotional pricing, savings, % off, sharp pricepoints (Late Majority audience)
+- Event Sale: Holiday, seasonal, event-tied promotion (seasonal language, date-driven)
+- Bundle: Multi-product, accessory bundles, "with purchase" offers
+- Clearance: End-of-life, inventory clearance, last chance
+- Brand: Brand awareness, Online Exclusive positioning, LG Signature
 - Comparison: Competitive or side-by-side comparison`;
 
       // Screen 1 sends the full raw brief text in keyMessage

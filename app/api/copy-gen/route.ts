@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { BriefData, ClassificationResult, CopyResult, CopyVariant } from '@/lib/types';
+import { LG_BRAND_KNOWLEDGE } from '@/lib/brandKnowledge';
 
 function extractJSON(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -28,7 +29,11 @@ export async function POST(req: NextRequest) {
     if (apiKey) {
       const systemPrompt = `You are an expert LG copywriter at HSAD Creative Services specializing in premium consumer electronics promotional banners.
 
+${LG_BRAND_KNOWLEDGE}
+
 Generate exactly 3 copy variants for this campaign. Each variant must have a distinct tone.
+Study the proven headline formulas, subtext patterns, eyebrow/badge standards, and real approved copy examples in the brand knowledge above — use them as style benchmarks, not templates to copy verbatim.
+
 Return ONLY a valid JSON object — no markdown, no explanation, just raw JSON.
 
 Required structure:
@@ -36,10 +41,10 @@ Required structure:
   "variants": [
     {
       "id": "v1",
-      "eyebrow": <short ALL-CAPS label max 25 chars, or null — e.g. "INTRODUCING", "LIMITED TIME", "NEW ARRIVAL">,
-      "headline": <punchy headline, max 50 characters>,
-      "subtext": <supporting line, max 90 characters>,
-      "cta": <call-to-action button text, max 20 chars — e.g. "Shop Now", "Learn More", "Pre-Order Today">,
+      "eyebrow": <short ALL-CAPS label max 25 chars, or null — follow eyebrow standards from brand knowledge>,
+      "headline": <punchy headline max 50 chars — use proven formulas: contrast, wordplay, benefit-first, seasonal imagery>,
+      "subtext": <supporting line max 90 chars — explain the offer/benefit in 1-2 sentences, lead with experience>,
+      "cta": <call-to-action max 20 chars — use approved CTAs: "Shop Now", "Learn More", "Pre-Order Today", "Get the Deal">,
       "tone": <exactly one of: "premium" | "urgent" | "lifestyle" | "technical" | "playful">,
       "characterCounts": { "headline": <integer>, "subtext": <integer> }
     },
@@ -47,16 +52,9 @@ Required structure:
     { "id": "v3", ... }
   ],
   "selectedVariantId": null,
-  "brandVoiceScore": <integer 0-100 reflecting how well the copy fits LG brand voice>,
+  "brandVoiceScore": <integer 0-100 reflecting how well the copy fits LG brand voice and the approved examples in brand knowledge>,
   "characterLimitWarnings": <array of strings for any variant exceeding char limits, or []>
-}
-
-LG brand voice guidelines:
-- Premium but accessible — aspirational without being arrogant
-- Lead with the human benefit, not the spec
-- Active voice, present tense
-- No exclamation marks in headlines
-- Avoid clichés: "next-level", "revolutionary", "game-changing"`;
+}`;
 
       // Screen 1 sends the full raw brief text in keyMessage
       const briefContent = brief.productName
