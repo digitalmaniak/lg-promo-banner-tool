@@ -1,110 +1,71 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, ChevronRight, Info } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Sparkles, ChevronRight, Upload, FileText, X } from 'lucide-react';
 import { usePipeline } from '@/context/PipelineContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { BriefData } from '@/lib/types';
 
-const CAMPAIGN_TYPES = [
-  'New Product Launch',
-  'Price Drop / Sale',
-  'Event / Holiday',
-  'Bundle Deal',
-  'Clearance',
-  'Brand Awareness',
-  'Competitive',
-];
-
-const BRAND_TONES = [
-  'Premium & Sophisticated',
-  'Urgent & Action-Oriented',
-  'Lifestyle & Aspirational',
-  'Technical & Feature-Rich',
-  'Playful & Energetic',
-];
-
-const initialBrief: BriefData = {
-  productName:      '',
-  productCategory:  '',
-  campaignType:     '',
-  targetAudience:   '',
-  keyMessage:       '',
-  price:            '',
-  promotionDetails: '',
-  campaignDates:    '',
-  retailer:         '',
-  brandTone:        '',
-  additionalNotes:  '',
-};
-
-function inputClass(hasError: boolean): string {
-  return [
-    'w-full bg-brand-panel border rounded-lg px-3 py-2 text-sm text-brand-light',
-    'placeholder-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-red',
-    'focus:border-transparent transition-all',
-    hasError ? 'border-red-500/70' : 'border-brand-border',
-  ].join(' ');
-}
-
-interface FieldProps {
-  label: string;
-  required?: boolean;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}
-
-function Field({ label, required, hint, error, children }: FieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-sm font-medium text-brand-light">
-        {label}
-        {required && <span className="text-brand-red text-xs">*</span>}
-        {hint && (
-          <span title={hint} className="text-brand-muted cursor-help">
-            <Info className="w-3 h-3" />
-          </span>
-        )}
-      </label>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
 export function Screen1Brief() {
   const { setBrief, setStepStatus, nextStep } = usePipeline();
-  const [form, setForm] = useState<BriefData>(initialBrief);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof BriefData, string>>>({});
+  const [rawText, setRawText]     = useState('');
+  const [fileName, setFileName]   = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const fileInputRef              = useRef<HTMLInputElement>(null);
 
-  const update = (field: keyof BriefData, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setRawText(text);
+      setFileName(file.name);
+      setError(null);
+    };
+    reader.readAsText(file);
+    // reset input so the same file can be re-uploaded
+    e.target.value = '';
   };
 
-  const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof BriefData, string>> = {};
-    if (!form.productName.trim())     newErrors.productName = 'Required';
-    if (!form.productCategory.trim()) newErrors.productCategory = 'Required';
-    if (!form.campaignType)           newErrors.campaignType = 'Select a campaign type';
-    if (!form.targetAudience.trim())  newErrors.targetAudience = 'Required';
-    if (!form.keyMessage.trim())      newErrors.keyMessage = 'Required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const clearFile = () => {
+    setFileName(null);
+    setRawText('');
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!rawText.trim()) {
+      setError('Please paste your brief or upload a file before continuing.');
+      return;
+    }
     setLoading(true);
+    setError(null);
     setStepStatus(1, 'loading');
-    await new Promise((r) => setTimeout(r, 400));
-    setBrief(form);
+    await new Promise((r) => setTimeout(r, 300));
+
+    // Pack the full raw brief into keyMessage so the classify + copy APIs receive it
+    const brief: BriefData = {
+      productName:      '',
+      productCategory:  '',
+      campaignType:     '',
+      targetAudience:   '',
+      keyMessage:       rawText.trim(),
+      price:            '',
+      promotionDetails: '',
+      campaignDates:    '',
+      retailer:         '',
+      brandTone:        '',
+      additionalNotes:  '',
+    };
+
+    setBrief(brief);
     setLoading(false);
     nextStep();
   };
+
+  const charCount = rawText.length;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -112,166 +73,107 @@ export function Screen1Brief() {
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-brand-light">Campaign Brief</h1>
         <p className="text-brand-muted text-sm">
-          Fill in your campaign details and Claude will classify the promotion type and generate tailored banner copy.
+          Paste your existing brief below or upload a text file. Claude will read it and handle the rest.
         </p>
       </div>
 
-      {/* Required fields */}
-      <Card>
-        <h2 className="text-xs uppercase tracking-wider text-brand-muted mb-5 font-semibold">
-          Core Details <span className="text-brand-red">*</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Product Name" required error={errors.productName}>
+      {/* Main input card */}
+      <Card padding="md">
+        {/* File upload strip */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-semibold text-brand-muted uppercase tracking-wider">
+            Brief Content
+          </span>
+
+          <div className="flex items-center gap-2">
+            {fileName ? (
+              <div className="flex items-center gap-1.5 text-xs text-accent-green bg-accent-green/10 border border-accent-green/30 rounded-full px-3 py-1">
+                <FileText className="w-3 h-3" />
+                <span className="max-w-[160px] truncate">{fileName}</span>
+                <button
+                  onClick={clearFile}
+                  className="ml-1 text-brand-muted hover:text-brand-light transition-colors"
+                  title="Remove file"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 text-xs text-brand-muted hover:text-brand-light border border-brand-border hover:border-brand-muted rounded-full px-3 py-1 transition-all"
+              >
+                <Upload className="w-3 h-3" />
+                Upload brief file
+              </button>
+            )}
             <input
-              value={form.productName}
-              onChange={(e) => update('productName', e.target.value)}
-              placeholder='e.g. OLED evo W6 97"'
-              className={inputClass(!!errors.productName)}
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.rtf,.doc,.docx"
+              className="hidden"
+              onChange={handleFileUpload}
             />
-          </Field>
-
-          <Field label="Product Category" required error={errors.productCategory}>
-            <input
-              value={form.productCategory}
-              onChange={(e) => update('productCategory', e.target.value)}
-              placeholder="e.g. OLED TV, Refrigerator, Washer"
-              className={inputClass(!!errors.productCategory)}
-            />
-          </Field>
-
-          <Field label="Campaign Type" required error={errors.campaignType}>
-            <select
-              value={form.campaignType}
-              onChange={(e) => update('campaignType', e.target.value)}
-              className={inputClass(!!errors.campaignType)}
-            >
-              <option value="">Select type...</option>
-              {CAMPAIGN_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field
-            label="Target Audience"
-            required
-            hint="Who is this campaign primarily targeting?"
-            error={errors.targetAudience}
-          >
-            <input
-              value={form.targetAudience}
-              onChange={(e) => update('targetAudience', e.target.value)}
-              placeholder="e.g. Early adopters, Tech enthusiasts 35-54"
-              className={inputClass(!!errors.targetAudience)}
-            />
-          </Field>
-
-          <div className="sm:col-span-2">
-            <Field
-              label="Key Message"
-              required
-              hint="The single most important thing the banner must communicate"
-              error={errors.keyMessage}
-            >
-              <textarea
-                rows={2}
-                value={form.keyMessage}
-                onChange={(e) => update('keyMessage', e.target.value)}
-                placeholder="e.g. The world's largest wallpaper OLED TV is finally here"
-                className={inputClass(!!errors.keyMessage)}
-              />
-            </Field>
           </div>
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          value={rawText}
+          onChange={(e) => {
+            setRawText(e.target.value);
+            if (error) setError(null);
+          }}
+          rows={18}
+          placeholder={`Paste your full campaign brief here...
+
+Example:
+Product: LG OLED evo G5 65"
+Campaign: New Product Launch
+Key Message: The brightest OLED ever made — experience perfect blacks and peak brightness together
+Target Audience: Premium TV buyers, home theater enthusiasts, ages 35-60
+Price: $2,999
+Promotion: Pre-order by May 31 and receive a free soundbar ($499 value)
+Retailer: Best Buy, LG.com
+Dates: May 15 – June 30, 2025
+Tone: Premium & Sophisticated`}
+          className={[
+            'w-full bg-brand-dark border rounded-lg px-4 py-3 text-sm text-brand-light',
+            'placeholder-brand-muted/40 focus:outline-none focus:ring-2 focus:ring-brand-red',
+            'focus:border-transparent transition-all resize-none leading-relaxed font-mono',
+            error ? 'border-red-500/70' : 'border-brand-border',
+          ].join(' ')}
+        />
+
+        {/* Footer row */}
+        <div className="flex items-center justify-between mt-2">
+          <span className={`text-xs font-mono ${charCount > 0 ? 'text-brand-muted' : 'text-brand-border'}`}>
+            {charCount > 0 ? `${charCount.toLocaleString()} characters` : 'No content yet'}
+          </span>
+          {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
       </Card>
 
-      {/* Optional fields */}
-      <Card>
-        <h2 className="text-xs uppercase tracking-wider text-brand-muted mb-5 font-semibold">
-          Additional Details{' '}
-          <span className="text-brand-muted text-xs normal-case font-normal">(optional but recommended)</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Price / Offer" error={errors.price}>
-            <input
-              value={form.price}
-              onChange={(e) => update('price', e.target.value)}
-              placeholder="e.g. $29,999 - Save $3,000"
-              className={inputClass(false)}
-            />
-          </Field>
-
-          <Field label="Retailer / Channel" error={errors.retailer}>
-            <input
-              value={form.retailer}
-              onChange={(e) => update('retailer', e.target.value)}
-              placeholder="e.g. Best Buy, LG.com, Costco"
-              className={inputClass(false)}
-            />
-          </Field>
-
-          <Field label="Campaign Dates" error={errors.campaignDates}>
-            <input
-              value={form.campaignDates}
-              onChange={(e) => update('campaignDates', e.target.value)}
-              placeholder="e.g. May 1 - June 30, 2025"
-              className={inputClass(false)}
-            />
-          </Field>
-
-          <Field label="Brand Tone" error={errors.brandTone}>
-            <select
-              value={form.brandTone}
-              onChange={(e) => update('brandTone', e.target.value)}
-              className={inputClass(false)}
-            >
-              <option value="">Let AI decide...</option>
-              {BRAND_TONES.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="sm:col-span-2">
-            <Field label="Promotion Details" error={errors.promotionDetails}>
-              <textarea
-                rows={2}
-                value={form.promotionDetails}
-                onChange={(e) => update('promotionDetails', e.target.value)}
-                placeholder="e.g. Pre-order bonus: $500 gift card + free installation"
-                className={inputClass(false)}
-              />
-            </Field>
-          </div>
-
-          <div className="sm:col-span-2">
-            <Field label="Additional Notes" error={errors.additionalNotes}>
-              <textarea
-                rows={2}
-                value={form.additionalNotes}
-                onChange={(e) => update('additionalNotes', e.target.value)}
-                placeholder="Any specific requirements, restrictions, or context for the AI..."
-                className={inputClass(false)}
-              />
-            </Field>
-          </div>
-        </div>
-      </Card>
+      {/* Tips */}
+      <div className="flex gap-3 text-xs text-brand-muted bg-brand-panel/50 border border-brand-border/50 rounded-xl px-4 py-3">
+        <Sparkles className="w-3.5 h-3.5 text-accent-violet shrink-0 mt-0.5" />
+        <span>
+          Include product name, campaign type, key message, target audience, pricing, and any promotion details.
+          The more context you provide, the more accurate the AI classification and copy will be.
+        </span>
+      </div>
 
       {/* CTA */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-brand-muted">
-          <span className="text-brand-red">*</span> Required fields
-        </p>
+      <div className="flex justify-end">
         <Button
           size="lg"
           loading={loading}
           icon={loading ? undefined : <Sparkles className="w-4 h-4" />}
           iconPosition="left"
           onClick={handleSubmit}
+          disabled={!rawText.trim()}
         >
-          {loading ? 'Saving...' : 'Classify & Generate Copy'}
+          {loading ? 'Reading brief...' : 'Classify & Generate Copy'}
           {!loading && <ChevronRight className="w-4 h-4 ml-1" />}
         </Button>
       </div>
