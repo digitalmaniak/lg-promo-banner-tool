@@ -173,7 +173,7 @@ Tone: Premium & Sophisticated`}
           onClick={handleSubmit}
           disabled={!rawText.trim()}
         >
-          {loading ? 'Reading brief...' : 'Classify & Generate Copy'}
+          {loading ? 'Classifying...' : 'Classify Brief'}
           {!loading && <ChevronRight className="w-4 h-4 ml-1" />}
         </Button>
       </div>
