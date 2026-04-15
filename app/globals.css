@@ -4,12 +4,12 @@
 
 :root {
   --brand-red: #B00020;
-  --brand-dark: #0D1117;
-  --brand-panel: #161B27;
-  --brand-card: #1C2333;
-  --brand-border: #2D3748;
-  --brand-muted: #8B949E;
-  --brand-light: #E6EDF3;
+  --brand-dark: #F4F6F8;
+  --brand-panel: #FFFFFF;
+  --brand-card: #FFFFFF;
+  --brand-border: #E2E8F0;
+  --brand-muted: #64748B;
+  --brand-light: #0F172A;
 }
 
 * {
@@ -70,18 +70,18 @@ body {
   }
 
   .glass-panel {
-    background: rgba(28, 35, 51, 0.8);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(45, 55, 72, 0.6);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
 
   .shimmer-bg {
     background: linear-gradient(
       90deg,
-      var(--brand-card) 25%,
-      rgba(45, 55, 72, 0.5) 50%,
-      var(--brand-card) 75%
+      #F1F5F9 25%,
+      #E2E8F0 50%,
+      #F1F5F9 75%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;

@@ -9,16 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // LG / HSAD brand palette
+        // LG / HSAD brand palette — light theme
         brand: {
           red:     '#B00020',
           'red-hover': '#8C001A',
-          dark:    '#0D1117',
-          panel:   '#161B27',
-          card:    '#1C2333',
-          border:  '#2D3748',
-          muted:   '#8B949E',
-          light:   '#E6EDF3',
+          dark:    '#F4F6F8',
+          panel:   '#FFFFFF',
+          card:    '#FFFFFF',
+          border:  '#E2E8F0',
+          muted:   '#64748B',
+          light:   '#0F172A',
         },
         accent: {
           amber:  '#E6A817',

@@ -40,9 +40,6 @@ export function WizardShell() {
                   LG Promo Banner Tool
                 </span>
               </div>
-              <span className="hidden sm:block text-xs text-brand-muted border-l border-brand-border pl-3">
-                HSAD Creative Services
-              </span>
             </div>
 
             {/* Progress bar (center) */}
@@ -73,7 +70,7 @@ export function WizardShell() {
       {/* ── Footer ── */}
       <footer className="border-t border-brand-border bg-brand-panel/50 py-3 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-xs text-brand-muted">
-          <span>LG Electronics · HSAD Creative Services</span>
+          <span>HSAD AX Services</span>
           <span>AI-powered · Internal Use Only</span>
         </div>
       </footer>

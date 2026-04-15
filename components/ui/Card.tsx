@@ -30,12 +30,12 @@ export function Card({
     <div
       onClick={onClick}
       className={[
-        'bg-brand-card rounded-xl border transition-all duration-150',
+        'bg-brand-card rounded-xl border shadow-sm transition-all duration-150',
         selected
-          ? 'border-brand-red ring-1 ring-brand-red/30'
+          ? 'border-brand-red ring-1 ring-brand-red/30 shadow-md'
           : 'border-brand-border',
         hoverable && !selected
-          ? 'hover:border-brand-muted cursor-pointer'
+          ? 'hover:border-brand-red/40 hover:shadow-md cursor-pointer'
           : '',
         onClick && !hoverable ? 'cursor-pointer' : '',
         paddingStyles[padding],
