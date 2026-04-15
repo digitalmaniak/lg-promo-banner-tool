@@ -166,7 +166,7 @@ Tone: Premium & Sophisticated`}
       {/* CTA */}
       <div className="flex justify-end">
         <Button
-          size="lg"
+          size="md"
           loading={loading}
           icon={loading ? undefined : <ChevronRight className="w-4 h-4" />}
           iconPosition="right"
