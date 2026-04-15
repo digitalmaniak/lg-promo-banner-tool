@@ -168,13 +168,12 @@ Tone: Premium & Sophisticated`}
         <Button
           size="lg"
           loading={loading}
-          icon={loading ? undefined : <Sparkles className="w-4 h-4" />}
-          iconPosition="left"
+          icon={loading ? undefined : <ChevronRight className="w-4 h-4" />}
+          iconPosition="right"
           onClick={handleSubmit}
           disabled={!rawText.trim()}
         >
           {loading ? 'Classifying...' : 'Classify Brief'}
-          {!loading && <ChevronRight className="w-4 h-4 ml-1" />}
         </Button>
       </div>
     </div>
