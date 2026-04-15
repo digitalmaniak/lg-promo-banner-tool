@@ -7,22 +7,72 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import type { BriefData } from '@/lib/types';
 
-const CAMPAIGN_TYPES = ['New Product Launch', 'Price Drop / Sale', 'Event / Holiday', 'Bundle Deal', 'Clearance', 'Brand Awareness', 'Competitive'];
-const BRAND_TONES    = ['Premium & Sophisticated', 'Urgent & Action-Oriented', 'Lifestyle & Aspirational', 'Technical & Feature-Rich', 'Playful & Energetic'];
+const CAMPAIGN_TYPES = [
+  'New Product Launch',
+  'Price Drop / Sale',
+  'Event / Holiday',
+  'Bundle Deal',
+  'Clearance',
+  'Brand Awareness',
+  'Competitive',
+];
+
+const BRAND_TONES = [
+  'Premium & Sophisticated',
+  'Urgent & Action-Oriented',
+  'Lifestyle & Aspirational',
+  'Technical & Feature-Rich',
+  'Playful & Energetic',
+];
 
 const initialBrief: BriefData = {
-  productName:       '',
-  productCategory:   '',
-  campaignType:      '',
-  targetAudience:    '',
-  keyMessage:        '',
-  price:             '',
-  promotionDetails:  '',
-  campaignDates:     '',
-  retailer:          '',
-  brandTone:         '',
-  additionalNotes:   '',
+  productName:      '',
+  productCategory:  '',
+  campaignType:     '',
+  targetAudience:   '',
+  keyMessage:       '',
+  price:            '',
+  promotionDetails: '',
+  campaignDates:    '',
+  retailer:         '',
+  brandTone:        '',
+  additionalNotes:  '',
 };
+
+function inputClass(hasError: boolean): string {
+  return [
+    'w-full bg-brand-panel border rounded-lg px-3 py-2 text-sm text-brand-light',
+    'placeholder-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-red',
+    'focus:border-transparent transition-all',
+    hasError ? 'border-red-500/70' : 'border-brand-border',
+  ].join(' ');
+}
+
+interface FieldProps {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}
+
+function Field({ label, required, hint, error, children }: FieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-1.5 text-sm font-medium text-brand-light">
+        {label}
+        {required && <span className="text-brand-red text-xs">*</span>}
+        {hint && (
+          <span title={hint} className="text-brand-muted cursor-help">
+            <Info className="w-3 h-3" />
+          </span>
+        )}
+      </label>
+      {children}
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
 
 export function Screen1Brief() {
   const { setBrief, setStepStatus, nextStep } = usePipeline();
@@ -36,7 +86,7 @@ export function Screen1Brief() {
   };
 
   const validate = (): boolean => {
-    const newErrors: typeof errors = {};
+    const newErrors: Partial<Record<keyof BriefData, string>> = {};
     if (!form.productName.trim())     newErrors.productName = 'Required';
     if (!form.productCategory.trim()) newErrors.productCategory = 'Required';
     if (!form.campaignType)           newErrors.campaignType = 'Select a campaign type';
@@ -50,51 +100,11 @@ export function Screen1Brief() {
     if (!validate()) return;
     setLoading(true);
     setStepStatus(1, 'loading');
-
-    // Small artificial delay to simulate saving before advancing
     await new Promise((r) => setTimeout(r, 400));
-
     setBrief(form);
     setLoading(false);
     nextStep();
   };
-
-  const Field = ({
-    label,
-    field,
-    required,
-    hint,
-    children,
-  }: {
-    label: string;
-    field: keyof BriefData;
-    required?: boolean;
-    hint?: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-sm font-medium text-brand-light">
-        {label}
-        {required && <span className="text-brand-red text-xs">*</span>}
-        {hint && (
-          <span title={hint} className="text-brand-muted cursor-help">
-            <Info className="w-3 h-3" />
-          </span>
-        )}
-      </label>
-      {children}
-      {errors[field] && (
-        <p className="text-xs text-red-400">{errors[field]}</p>
-      )}
-    </div>
-  );
-
-  const inputClass = (hasError: boolean) =>
-    [
-      'w-full bg-brand-panel border rounded-lg px-3 py-2 text-sm text-brand-light placeholder-brand-muted/60',
-      'focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent transition-all',
-      hasError ? 'border-red-500/70' : 'border-brand-border',
-    ].join(' ');
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -112,16 +122,16 @@ export function Screen1Brief() {
           Core Details <span className="text-brand-red">*</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Product Name" field="productName" required>
+          <Field label="Product Name" required error={errors.productName}>
             <input
               value={form.productName}
               onChange={(e) => update('productName', e.target.value)}
-              placeholder="e.g. OLED evo W6 97""
+              placeholder='e.g. OLED evo W6 97"'
               className={inputClass(!!errors.productName)}
             />
           </Field>
 
-          <Field label="Product Category" field="productCategory" required>
+          <Field label="Product Category" required error={errors.productCategory}>
             <input
               value={form.productCategory}
               onChange={(e) => update('productCategory', e.target.value)}
@@ -130,30 +140,40 @@ export function Screen1Brief() {
             />
           </Field>
 
-          <Field label="Campaign Type" field="campaignType" required>
+          <Field label="Campaign Type" required error={errors.campaignType}>
             <select
               value={form.campaignType}
               onChange={(e) => update('campaignType', e.target.value)}
               className={inputClass(!!errors.campaignType)}
             >
-              <option value="">Select type…</option>
+              <option value="">Select type...</option>
               {CAMPAIGN_TYPES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </Field>
 
-          <Field label="Target Audience" field="targetAudience" required hint="Who is this campaign primarily targeting?">
+          <Field
+            label="Target Audience"
+            required
+            hint="Who is this campaign primarily targeting?"
+            error={errors.targetAudience}
+          >
             <input
               value={form.targetAudience}
               onChange={(e) => update('targetAudience', e.target.value)}
-              placeholder="e.g. Early adopters, Tech enthusiasts 35–54"
+              placeholder="e.g. Early adopters, Tech enthusiasts 35-54"
               className={inputClass(!!errors.targetAudience)}
             />
           </Field>
 
           <div className="sm:col-span-2">
-            <Field label="Key Message" field="keyMessage" required hint="The single most important thing the banner must communicate">
+            <Field
+              label="Key Message"
+              required
+              hint="The single most important thing the banner must communicate"
+              error={errors.keyMessage}
+            >
               <textarea
                 rows={2}
                 value={form.keyMessage}
@@ -169,19 +189,20 @@ export function Screen1Brief() {
       {/* Optional fields */}
       <Card>
         <h2 className="text-xs uppercase tracking-wider text-brand-muted mb-5 font-semibold">
-          Additional Details <span className="text-brand-muted text-xs normal-case font-normal">(optional but recommended)</span>
+          Additional Details{' '}
+          <span className="text-brand-muted text-xs normal-case font-normal">(optional but recommended)</span>
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Price / Offer" field="price">
+          <Field label="Price / Offer" error={errors.price}>
             <input
               value={form.price}
               onChange={(e) => update('price', e.target.value)}
-              placeholder="e.g. $29,999 · Save $3,000"
+              placeholder="e.g. $29,999 - Save $3,000"
               className={inputClass(false)}
             />
           </Field>
 
-          <Field label="Retailer / Channel" field="retailer">
+          <Field label="Retailer / Channel" error={errors.retailer}>
             <input
               value={form.retailer}
               onChange={(e) => update('retailer', e.target.value)}
@@ -190,22 +211,22 @@ export function Screen1Brief() {
             />
           </Field>
 
-          <Field label="Campaign Dates" field="campaignDates">
+          <Field label="Campaign Dates" error={errors.campaignDates}>
             <input
               value={form.campaignDates}
               onChange={(e) => update('campaignDates', e.target.value)}
-              placeholder="e.g. May 1 – June 30, 2025"
+              placeholder="e.g. May 1 - June 30, 2025"
               className={inputClass(false)}
             />
           </Field>
 
-          <Field label="Brand Tone" field="brandTone">
+          <Field label="Brand Tone" error={errors.brandTone}>
             <select
               value={form.brandTone}
               onChange={(e) => update('brandTone', e.target.value)}
               className={inputClass(false)}
             >
-              <option value="">Let AI decide…</option>
+              <option value="">Let AI decide...</option>
               {BRAND_TONES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -213,7 +234,7 @@ export function Screen1Brief() {
           </Field>
 
           <div className="sm:col-span-2">
-            <Field label="Promotion Details" field="promotionDetails">
+            <Field label="Promotion Details" error={errors.promotionDetails}>
               <textarea
                 rows={2}
                 value={form.promotionDetails}
@@ -225,12 +246,12 @@ export function Screen1Brief() {
           </div>
 
           <div className="sm:col-span-2">
-            <Field label="Additional Notes" field="additionalNotes">
+            <Field label="Additional Notes" error={errors.additionalNotes}>
               <textarea
                 rows={2}
                 value={form.additionalNotes}
                 onChange={(e) => update('additionalNotes', e.target.value)}
-                placeholder="Any specific requirements, restrictions, or context for the AI…"
+                placeholder="Any specific requirements, restrictions, or context for the AI..."
                 className={inputClass(false)}
               />
             </Field>
@@ -250,7 +271,7 @@ export function Screen1Brief() {
           iconPosition="left"
           onClick={handleSubmit}
         >
-          {loading ? 'Saving…' : 'Classify & Generate Copy'}
+          {loading ? 'Saving...' : 'Classify & Generate Copy'}
           {!loading && <ChevronRight className="w-4 h-4 ml-1" />}
         </Button>
       </div>
