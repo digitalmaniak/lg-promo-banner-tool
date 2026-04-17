@@ -85,6 +85,22 @@ export function Screen6Export() {
     setFigmaStatus('loading');
     setFigmaError(null);
     try {
+      // Step 1 — save banner data so the Figma plugin can fetch it
+      await fetch('/api/figma-data', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          eyebrow:        selectedCopy?.eyebrow ?? '',
+          headline:       selectedCopy?.headline ?? '',
+          subtext:        selectedCopy?.subtext ?? '',
+          cta:            selectedCopy?.cta ?? '',
+          backgroundUrl:  selectedBg?.url ?? '',
+          classification: classification?.type ?? '',
+          template:       classification?.template ?? '',
+        }),
+      });
+
+      // Step 2 — post Figma comment (requires FIGMA_ACCESS_TOKEN in Vercel)
       const res = await fetch('/api/figma-push', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,21 +237,30 @@ export function Screen6Export() {
 
               {figmaStatus === 'done' && figmaUrl ? (
                 <div className="space-y-3">
-                  <StatusBadge variant="complete" label="Pushed to Figma!" />
-                  {pushSummary && (
-                    <ul className="text-xs text-brand-muted space-y-1">
+                  <StatusBadge variant="complete" label="Ready for plugin!" />
+                  <ul className="text-xs text-brand-muted space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3 h-3 text-green-500 shrink-0" />
+                      Banner data saved — plugin can now fetch it
+                    </li>
+                    {pushSummary?.commentId && (
                       <li className="flex items-center gap-2">
                         <Check className="w-3 h-3 text-green-500 shrink-0" />
-                        Handoff comment posted to template frame
+                        Handoff comment posted to Figma frame
                       </li>
-                      {pushSummary.imageUploaded && (
-                        <li className="flex items-center gap-2">
-                          <Check className="w-3 h-3 text-green-500 shrink-0" />
-                          Background image uploaded to Figma CDN
-                        </li>
-                      )}
-                    </ul>
-                  )}
+                    )}
+                  </ul>
+
+                  {/* Plugin next steps */}
+                  <div className="bg-brand-panel border border-brand-border rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-brand-light">Next: run the plugin in Figma</p>
+                    <ol className="text-xs text-brand-muted space-y-1 list-decimal list-inside">
+                      <li>Open the Figma template file</li>
+                      <li>Menu → Plugins → Development → <strong className="text-brand-light">LG Banner Tool</strong></li>
+                      <li>Click <strong className="text-brand-light">Apply to Template</strong></li>
+                    </ol>
+                  </div>
+
                   <a
                     href={figmaUrl}
                     target="_blank"
@@ -243,7 +268,7 @@ export function Screen6Export() {
                     className="flex items-center gap-2 text-sm font-medium text-brand-red hover:underline"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Open frame in Figma
+                    Open template in Figma
                   </a>
                 </div>
               ) : (
