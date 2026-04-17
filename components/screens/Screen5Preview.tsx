@@ -255,30 +255,6 @@ export function Screen5Preview() {
             </button>
           )}
 
-          {/* Badge (top right, from classification) */}
-          {classification?.suggestedBadge && (
-            <div
-              className="absolute"
-              style={{ top: '8%', right: productImg ? '4%' : '6%' }}
-            >
-              <div
-                style={{
-                  backgroundColor: '#B00020',
-                  color: '#FFFFFF',
-                  fontFamily: "'LGEIText', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 'clamp(7px, 0.65vw, 10px)',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  padding: 'clamp(4px, 0.4vw, 6px) clamp(8px, 0.8vw, 12px)',
-                  borderRadius: '4px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {classification.suggestedBadge}
-              </div>
-            </div>
-          )}
 
         </div>{/* end aspect-ratio container */}
       </div>
