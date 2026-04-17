@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── LG EI Brand Fonts ─────────────────────────────────────────── */
+@font-face {
+  font-family: 'LGEIHeadline';
+  src: url('/fonts/LGEIHeadline-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIHeadline';
+  src: url('/fonts/LGEIHeadline-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIHeadline';
+  src: url('/fonts/LGEIHeadline-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIText';
+  src: url('/fonts/LGEITextTTF-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIText';
+  src: url('/fonts/LGEITextTTF-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIText';
+  src: url('/fonts/LGEIText-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'LGEIText';
+  src: url('/fonts/LGEIText-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --brand-red: #B00020;
   --brand-dark: #F4F6F8;
