@@ -1,237 +1,238 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Download, Figma, Check, Package, RotateCcw, ExternalLink } from 'lucide-react';
+import {
+  ChevronLeft, Download, Figma, Check,
+  RotateCcw, ExternalLink, Copy, Image as ImageIcon,
+} from 'lucide-react';
 import { usePipeline } from '@/context/PipelineContext';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { BANNER_SIZES } from '@/lib/types';
-import type { BannerSize } from '@/lib/types';
 
-type ExportStatus = 'idle' | 'exporting' | 'done' | 'error';
+type ActionStatus = 'idle' | 'loading' | 'done' | 'error';
+
+// ── Small copy-to-clipboard helper ───────────────────────────────
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  return (
+    <div className="group">
+      <p className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1">{label}</p>
+      <div className="flex items-start gap-2 bg-brand-panel border border-brand-border rounded-lg px-3 py-2.5">
+        <p className="flex-1 text-sm text-brand-light leading-snug">{value}</p>
+        <button
+          onClick={copy}
+          title="Copy to clipboard"
+          className="shrink-0 mt-0.5 text-brand-muted hover:text-brand-red transition-colors"
+        >
+          {copied
+            ? <Check className="w-3.5 h-3.5 text-green-500" />
+            : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function Screen6Export() {
-  const { exportConfig, updateExportConfig, bannerConfig, preview, prevStep, reset } = usePipeline();
-  const [exportStatus, setExportStatus] = useState<ExportStatus>('idle');
-  const [figmaStatus,  setFigmaStatus]  = useState<ExportStatus>('idle');
-  const [exportedUrls, setExportedUrls] = useState<{ label: string; url: string }[]>([]);
+  const {
+    copyResult, classification, backgrounds, selectedBackgroundId,
+    exportConfig, updateExportConfig,
+    bannerConfig, preview,
+    prevStep, reset,
+  } = usePipeline();
+
+  const [exportStatus, setExportStatus] = useState<ActionStatus>('idle');
+  const [figmaStatus,  setFigmaStatus]  = useState<ActionStatus>('idle');
+  const [downloadUrl,  setDownloadUrl]  = useState<string | null>(null);
   const [figmaUrl,     setFigmaUrl]     = useState<string | null>(null);
   const [error,        setError]        = useState<string | null>(null);
 
-  const toggleSize = (size: BannerSize) => {
-    const exists = exportConfig.sizes.some((s) => s.label === size.label);
-    updateExportConfig({
-      sizes: exists
-        ? exportConfig.sizes.filter((s) => s.label !== size.label)
-        : [...exportConfig.sizes, size],
-    });
-  };
+  const selectedCopy = copyResult?.variants.find((v) => v.id === copyResult?.selectedVariantId);
+  const selectedBg   = backgrounds.find((b) => b.id === selectedBackgroundId);
 
-  const toggleFormat = (fmt: 'jpg' | 'png' | 'webp') => {
-    const exists = exportConfig.formats.includes(fmt);
-    updateExportConfig({
-      formats: exists
-        ? exportConfig.formats.filter((f) => f !== fmt)
-        : [...exportConfig.formats, fmt],
-    });
-  };
-
-  const handleExport = async () => {
-    if (exportConfig.sizes.length === 0) return;
-    setExportStatus('exporting');
+  // ── Background image download ─────────────────────────────────
+  const handleExportBg = async () => {
+    if (!selectedBg?.url) return;
+    setExportStatus('loading');
     setError(null);
-
     try {
-      const res = await fetch('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bannerConfig, exportConfig }),
-      });
-      if (!res.ok) throw new Error(`Export API error: ${res.status}`);
-      const { files } = await res.json();
-      setExportedUrls(files ?? []);
+      const res  = await fetch(selectedBg.url);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `lg-hero-banner-background-1600x600.jpg`;
+      a.click();
+      URL.revokeObjectURL(url);
       setExportStatus('done');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+    } catch {
+      setError('Download failed — try right-clicking the background in Screen 4 and saving manually.');
       setExportStatus('error');
     }
   };
 
+  // ── Figma push ────────────────────────────────────────────────
   const handleFigmaPush = async () => {
-    setFigmaStatus('exporting');
-
+    setFigmaStatus('loading');
     try {
       const res = await fetch('/api/figma-push', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bannerConfig, previewUrl: preview.previewUrl, figmaFrameId: exportConfig.figmaFrameId }),
+        body:    JSON.stringify({
+          bannerConfig,
+          previewUrl:    preview.previewUrl,
+          figmaFrameId:  exportConfig.figmaFrameId,
+          selectedCopy,
+          backgroundUrl: selectedBg?.url,
+        }),
       });
       if (!res.ok) throw new Error(`Figma API error: ${res.status}`);
       const { figmaUrl: url } = await res.json();
       setFigmaUrl(url);
       setFigmaStatus('done');
-    } catch (err) {
+    } catch {
       setFigmaStatus('error');
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
+
+      {/* ── Header ───────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-brand-light">Export & Push</h1>
+        <h1 className="text-2xl font-bold text-brand-light">Export &amp; Push</h1>
         <p className="text-brand-muted text-sm mt-1">
-          Download your banner in multiple sizes and formats, or push directly to Figma.
+          Download your Hero Banner background and push assets to Figma for handoff.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Export options */}
+
+        {/* ── LEFT: Copy elements + background export ─────────── */}
         <div className="space-y-5">
-          {/* Sizes */}
+
+          {/* Selected copy elements */}
           <Card>
-            <CardHeader title="Output Sizes" subtitle="Select which sizes to export" />
-            <div className="space-y-2">
-              {(['web', 'display', 'social', 'email'] as const).map((platform) => {
-                const sizes = BANNER_SIZES.filter((s) => s.platform === platform);
-                return (
-                  <div key={platform}>
-                    <p className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5 capitalize">
-                      {platform}
-                    </p>
-                    {sizes.map((size) => {
-                      const selected = exportConfig.sizes.some((s) => s.label === size.label);
-                      return (
-                        <label
-                          key={size.label}
-                          className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-brand-panel cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={[
-                                'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors',
-                                selected ? 'bg-brand-red border-brand-red' : 'border-brand-border group-hover:border-brand-muted',
-                              ].join(' ')}
-                            >
-                              {selected && <Check className="w-2.5 h-2.5 text-white" />}
-                            </div>
-                            <span className="text-sm text-brand-light">{size.label}</span>
-                          </div>
-                          <span className="text-xs text-brand-muted font-mono">
-                            {size.width}×{size.height}
-                          </span>
-                          <input type="checkbox" className="sr-only" checked={selected} onChange={() => toggleSize(size)} />
-                        </label>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+            <CardHeader title="Selected Copy" subtitle="From Screen 3 — click any field to copy" />
+            <div className="space-y-3">
+              {selectedCopy?.eyebrow && (
+                <CopyField label="Eyebrow" value={selectedCopy.eyebrow} />
+              )}
+              <CopyField
+                label="Headline"
+                value={selectedCopy?.headline ?? '—'}
+              />
+              {selectedCopy?.subtext && (
+                <CopyField label="Subtext / Body" value={selectedCopy.subtext} />
+              )}
+              <CopyField
+                label="CTA"
+                value={selectedCopy?.cta ?? '—'}
+              />
+              {classification?.type && (
+                <CopyField
+                  label="Classification"
+                  value={`${classification.type} · ${classification.template}`}
+                />
+              )}
             </div>
           </Card>
 
-          {/* Formats */}
+          {/* Hero Banner background export */}
           <Card>
-            <CardHeader title="File Format" />
-            <div className="flex gap-2">
-              {(['jpg', 'png', 'webp'] as const).map((fmt) => {
-                const active = exportConfig.formats.includes(fmt);
-                return (
-                  <button
-                    key={fmt}
-                    onClick={() => toggleFormat(fmt)}
-                    className={[
-                      'flex-1 py-2 rounded-lg text-sm font-semibold uppercase border transition-all',
-                      active
-                        ? 'bg-brand-red/20 border-brand-red text-brand-red'
-                        : 'bg-transparent border-brand-border text-brand-muted hover:border-brand-muted',
-                    ].join(' ')}
-                  >
-                    .{fmt}
-                  </button>
-                );
-              })}
+            <CardHeader
+              title="Hero Banner Background"
+              subtitle="1600 × 600 px · Ideogram v2 · JPG"
+            />
+            <div className="flex items-center gap-3 mb-4">
+              {selectedBg?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selectedBg.url}
+                  alt="Selected background thumbnail"
+                  className="w-24 h-9 rounded object-cover border border-brand-border shrink-0"
+                />
+              ) : (
+                <div className="w-24 h-9 rounded bg-brand-panel border border-brand-border shrink-0 flex items-center justify-center">
+                  <ImageIcon className="w-4 h-4 text-brand-muted" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-sm text-brand-light font-medium truncate">
+                  lg-hero-banner-background-1600x600.jpg
+                </p>
+                <p className="text-xs text-brand-muted">Web Hero · OBS / PS ready</p>
+              </div>
             </div>
-          </Card>
-        </div>
-
-        {/* Right: Actions & status */}
-        <div className="space-y-5">
-          {/* Export action */}
-          <Card padding="lg">
-            <CardHeader title="Download Package" />
-            <p className="text-xs text-brand-muted mb-4">
-              {exportConfig.sizes.length} size{exportConfig.sizes.length !== 1 ? 's' : ''} selected ·{' '}
-              {exportConfig.formats.join(', ').toUpperCase()}
-            </p>
 
             {exportStatus === 'done' ? (
-              <div className="space-y-3">
-                <StatusBadge variant="complete" label="Export complete!" />
-                <div className="space-y-1.5">
-                  {exportedUrls.map(({ label, url }) => (
-                    <a
-                      key={label}
-                      href={url}
-                      download
-                      className="flex items-center justify-between text-xs text-brand-light hover:text-accent-blue px-2 py-1.5 rounded hover:bg-brand-panel transition-colors"
-                    >
-                      <span>{label}</span>
-                      <Download className="w-3.5 h-3.5" />
-                    </a>
-                  ))}
-                </div>
-              </div>
+              <StatusBadge variant="complete" label="Downloaded!" />
             ) : (
               <>
-                {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+                {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
                 <Button
                   className="w-full"
-                  loading={exportStatus === 'exporting'}
-                  disabled={exportConfig.sizes.length === 0}
-                  icon={<Package className="w-4 h-4" />}
-                  onClick={handleExport}
+                  loading={exportStatus === 'loading'}
+                  disabled={!selectedBg?.url}
+                  icon={<Download className="w-4 h-4" />}
+                  onClick={handleExportBg}
                 >
-                  Export {exportConfig.sizes.length > 0 ? `(${exportConfig.sizes.length} sizes)` : ''}
+                  Download Background JPG
                 </Button>
               </>
             )}
           </Card>
+        </div>
 
-          {/* Figma push */}
+        {/* ── RIGHT: Figma push ────────────────────────────────── */}
+        <div className="space-y-5">
           <Card padding="lg">
             <CardHeader
               title="Push to Figma"
-              badge={<StatusBadge variant="info" label="Coming Soon" />}
+              badge={<StatusBadge variant="info" label="Next up" />}
             />
-            <p className="text-xs text-brand-muted mb-4">
-              Automatically place the banner into a Figma frame for handoff to the design team.
+            <p className="text-xs text-brand-muted mb-4 leading-relaxed">
+              Enter your Figma file URL or Frame ID to place the banner background and
+              copy elements directly into the template frame for design handoff.
             </p>
 
             <div className="space-y-3">
-              <input
-                placeholder="Figma Frame ID (optional)"
-                value={exportConfig.figmaFrameId ?? ''}
-                onChange={(e) => updateExportConfig({ figmaFrameId: e.target.value })}
-                className="w-full bg-brand-panel border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-light placeholder-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-red"
-              />
+              <div>
+                <label className="text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1">
+                  Figma File URL or Frame ID
+                </label>
+                <input
+                  placeholder="https://figma.com/file/... or frame node ID"
+                  value={exportConfig.figmaFrameId ?? ''}
+                  onChange={(e) => updateExportConfig({ figmaFrameId: e.target.value })}
+                  className="w-full bg-brand-panel border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-light placeholder-brand-muted/50 focus:outline-none focus:ring-2 focus:ring-brand-red"
+                />
+              </div>
 
               {figmaStatus === 'done' && figmaUrl ? (
-                <a
-                  href={figmaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-accent-blue hover:underline"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Open in Figma
-                </a>
+                <div className="space-y-2">
+                  <StatusBadge variant="complete" label="Pushed to Figma!" />
+                  <a
+                    href={figmaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-brand-red hover:underline"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open in Figma
+                  </a>
+                </div>
               ) : (
                 <Button
                   variant="secondary"
                   className="w-full"
-                  loading={figmaStatus === 'exporting'}
+                  loading={figmaStatus === 'loading'}
                   icon={<Figma className="w-4 h-4" />}
                   onClick={handleFigmaPush}
                   disabled
@@ -239,11 +240,35 @@ export function Screen6Export() {
                   Push to Figma
                 </Button>
               )}
+
+              {figmaStatus === 'error' && (
+                <p className="text-xs text-red-400">Push failed — Figma integration coming soon.</p>
+              )}
             </div>
           </Card>
 
+          {/* What gets pushed summary */}
+          <Card padding="sm">
+            <p className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-3">
+              What will be pushed to Figma
+            </p>
+            <ul className="space-y-2 text-xs text-brand-muted">
+              {[
+                'Hero Banner background image (1600×600)',
+                'Eyebrow, Headline, Subtext, CTA as text layers',
+                'Classification type & template name as frame notes',
+                'LG EI font styles applied to text layers',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </Card>
+
           {/* Start over */}
-          <div className="text-center">
+          <div className="text-center pt-2">
             <button
               onClick={reset}
               className="flex items-center gap-1.5 text-xs text-brand-muted hover:text-brand-light transition-colors mx-auto"
@@ -255,9 +280,11 @@ export function Screen6Export() {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* ── Navigation ───────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-2">
-        <Button variant="ghost" onClick={prevStep} icon={<ChevronLeft className="w-4 h-4" />}>Back</Button>
+        <Button variant="ghost" onClick={prevStep} icon={<ChevronLeft className="w-4 h-4" />}>
+          Back
+        </Button>
         <StatusBadge variant="complete" label="Pipeline complete" />
       </div>
     </div>
