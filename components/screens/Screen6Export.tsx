@@ -212,9 +212,16 @@ export function Screen6Export() {
         </div>
 
         {/* ── RIGHT: Figma push ────────────────────────────────── */}
-        <div className="space-y-5">
+        <div className="space-y-5 opacity-40 pointer-events-none select-none">
           <Card padding="lg">
-            <CardHeader title="Push to Figma" />
+            <CardHeader
+              title="Push to Figma"
+              badge={
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium text-brand-muted bg-brand-border/30 border-brand-border/50">
+                  Reconsidering
+                </span>
+              }
+            />
             <p className="text-xs text-brand-muted mb-4 leading-relaxed">
               Uploads the background to Figma's CDN and posts an anchored handoff
               comment on the template frame with all copy, classification, and next steps
