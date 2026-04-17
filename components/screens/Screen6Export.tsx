@@ -78,25 +78,30 @@ export function Screen6Export() {
   };
 
   // ── Figma push ────────────────────────────────────────────────
+  const [figmaError, setFigmaError] = useState<string | null>(null);
+  const [pushSummary, setPushSummary] = useState<{ imageUploaded: boolean; commentId: string } | null>(null);
+
   const handleFigmaPush = async () => {
     setFigmaStatus('loading');
+    setFigmaError(null);
     try {
       const res = await fetch('/api/figma-push', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
-          bannerConfig,
-          previewUrl:    preview.previewUrl,
-          figmaFrameId:  exportConfig.figmaFrameId,
           selectedCopy,
-          backgroundUrl: selectedBg?.url,
+          classification,
+          backgroundUrl:  selectedBg?.url,
+          figmaFrameId:   exportConfig.figmaFrameId || undefined,
         }),
       });
-      if (!res.ok) throw new Error(`Figma API error: ${res.status}`);
-      const { figmaUrl: url } = await res.json();
-      setFigmaUrl(url);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `Figma push failed (${res.status})`);
+      setFigmaUrl(data.figmaUrl);
+      setPushSummary({ imageUploaded: data.summary?.imageUploaded, commentId: data.commentId });
       setFigmaStatus('done');
-    } catch {
+    } catch (err) {
+      setFigmaError(err instanceof Error ? err.message : 'Push failed');
       setFigmaStatus('error');
     }
   };
@@ -193,22 +198,21 @@ export function Screen6Export() {
         {/* ── RIGHT: Figma push ────────────────────────────────── */}
         <div className="space-y-5">
           <Card padding="lg">
-            <CardHeader
-              title="Push to Figma"
-              badge={<StatusBadge variant="info" label="Next up" />}
-            />
+            <CardHeader title="Push to Figma" />
             <p className="text-xs text-brand-muted mb-4 leading-relaxed">
-              Enter your Figma file URL or Frame ID to place the banner background and
-              copy elements directly into the template frame for design handoff.
+              Uploads the background to Figma's CDN and posts an anchored handoff
+              comment on the template frame with all copy, classification, and next steps
+              for the design team.
             </p>
 
             <div className="space-y-3">
+              {/* Optional frame ID override */}
               <div>
                 <label className="text-xs font-semibold text-brand-muted uppercase tracking-wider block mb-1">
-                  Figma File URL or Frame ID
+                  Frame Node ID <span className="font-normal normal-case">(optional — defaults to template root)</span>
                 </label>
                 <input
-                  placeholder="https://figma.com/file/... or frame node ID"
+                  placeholder="e.g. 12:34  — leave blank to use default frame"
                   value={exportConfig.figmaFrameId ?? ''}
                   onChange={(e) => updateExportConfig({ figmaFrameId: e.target.value })}
                   className="w-full bg-brand-panel border border-brand-border rounded-lg px-3 py-2 text-sm text-brand-light placeholder-brand-muted/50 focus:outline-none focus:ring-2 focus:ring-brand-red"
@@ -216,33 +220,49 @@ export function Screen6Export() {
               </div>
 
               {figmaStatus === 'done' && figmaUrl ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <StatusBadge variant="complete" label="Pushed to Figma!" />
+                  {pushSummary && (
+                    <ul className="text-xs text-brand-muted space-y-1">
+                      <li className="flex items-center gap-2">
+                        <Check className="w-3 h-3 text-green-500 shrink-0" />
+                        Handoff comment posted to template frame
+                      </li>
+                      {pushSummary.imageUploaded && (
+                        <li className="flex items-center gap-2">
+                          <Check className="w-3 h-3 text-green-500 shrink-0" />
+                          Background image uploaded to Figma CDN
+                        </li>
+                      )}
+                    </ul>
+                  )}
                   <a
                     href={figmaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-brand-red hover:underline"
+                    className="flex items-center gap-2 text-sm font-medium text-brand-red hover:underline"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Open in Figma
+                    Open frame in Figma
                   </a>
                 </div>
               ) : (
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  loading={figmaStatus === 'loading'}
-                  icon={<Figma className="w-4 h-4" />}
-                  onClick={handleFigmaPush}
-                  disabled
-                >
-                  Push to Figma
-                </Button>
-              )}
-
-              {figmaStatus === 'error' && (
-                <p className="text-xs text-red-400">Push failed — Figma integration coming soon.</p>
+                <>
+                  {figmaError && (
+                    <p className="text-xs text-red-400 bg-red-50 border border-red-200 rounded-lg p-3 leading-relaxed">
+                      {figmaError}
+                    </p>
+                  )}
+                  <Button
+                    className="w-full"
+                    loading={figmaStatus === 'loading'}
+                    icon={<Figma className="w-4 h-4" />}
+                    onClick={handleFigmaPush}
+                    disabled={!selectedBg?.url}
+                  >
+                    {figmaStatus === 'loading' ? 'Pushing to Figma…' : 'Push to Figma'}
+                  </Button>
+                </>
               )}
             </div>
           </Card>
