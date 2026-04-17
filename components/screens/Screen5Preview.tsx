@@ -104,11 +104,17 @@ export function Screen5Preview() {
             }}
           />
 
-          {/* Layer 2 — Overlay tint for copy legibility */}
+          {/* Layer 2 — Gradient overlay for copy legibility
+               Dark templates: black-to-transparent left→right (darkens copy zone)
+               Light templates: white-to-transparent left→right (lightens copy zone) */}
           {overlay > 0 && (
             <div
               className="absolute inset-0"
-              style={{ background: `rgba(0,0,0,${overlay})` }}
+              style={{
+                background: darkText
+                  ? `linear-gradient(to right, rgba(255,255,255,${overlay}) 0%, rgba(255,255,255,${overlay * 0.6}) 45%, transparent 70%)`
+                  : `linear-gradient(to right, rgba(0,0,0,${overlay}) 0%, rgba(0,0,0,${overlay * 0.6}) 45%, transparent 70%)`,
+              }}
             />
           )}
 
@@ -331,7 +337,7 @@ export function Screen5Preview() {
                 onChange={(e) => setOverlay(parseFloat(e.target.value))}
                 className="w-full accent-brand-red"
               />
-              <p className="text-xs text-brand-muted mt-1">Darken background for copy legibility</p>
+              <p className="text-xs text-brand-muted mt-1">Gradient fades left → transparent right</p>
             </div>
 
             {/* Text scheme */}
