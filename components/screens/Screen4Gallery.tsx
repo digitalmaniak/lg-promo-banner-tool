@@ -107,15 +107,15 @@ export function Screen4Gallery() {
 
       {/* Gallery grid */}
       {backgrounds.length === 0 && loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="aspect-video rounded-xl shimmer-bg" />
           ))}
         </div>
       )}
 
       {backgrounds.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-fade-in">
+        <div className="grid grid-cols-2 gap-4 animate-fade-in">
           {backgrounds.map((bg) => (
             <BackgroundThumbnail
               key={bg.id}
